@@ -1,1 +1,896 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f5c518">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Estoque">
+<title>Estoque de Celulares</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0a;--bg2:#141414;--bg3:#1e1e1e;--bg4:#282828;
+  --border:#2a2a2a;--border2:#333;
+  --text:#f2ede4;--text2:#888;--text3:#444;
+  --accent:#f5c518;--green:#00e676;--green2:rgba(0,230,118,.1);
+  --red:#ff5252;--red2:rgba(255,82,82,.1);
+  --r:8px;--mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100dvh;overscroll-behavior:none}
 
+/* LOADING */
+.loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:999;transition:opacity .3s}
+.loading-screen.hidden{opacity:0;pointer-events:none}
+.spinner{width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-logo{font-family:var(--mono);font-size:13px;color:var(--accent);letter-spacing:.15em}
+
+/* SETUP */
+.setup-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:900;align-items:center;justify-content:center;padding:1.5rem;overflow-y:auto}
+.setup-screen.show{display:flex}
+.setup-box{max-width:440px;width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:2rem}
+.setup-title{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem}
+.setup-sub{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:1.5rem}
+.setup-steps{display:flex;flex-direction:column;gap:10px;margin-bottom:1.5rem}
+.step{display:flex;gap:12px;align-items:flex-start;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px}
+.step-n{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--accent);background:rgba(245,197,24,.1);border:1px solid rgba(245,197,24,.2);border-radius:4px;padding:2px 8px;flex-shrink:0;margin-top:1px}
+.step-txt{font-size:13px;color:var(--text2);line-height:1.5}
+.step-txt strong{color:var(--text);font-weight:600}
+.fg{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.fg label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.12em;font-family:var(--mono)}
+.fg input,.fg select{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none;transition:border-color .2s;width:100%}
+.fg input:focus,.fg select:focus{border-color:var(--accent)}
+
+/* LOGIN */
+.login-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:800;align-items:center;justify-content:center;padding:1.5rem}
+.login-screen.show{display:flex}
+.login-box{max-width:340px;width:100%;text-align:center}
+.login-logo{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent);letter-spacing:.15em;margin-bottom:.25rem}
+.login-sub{font-size:13px;color:var(--text3);margin-bottom:2rem}
+.user-list{display:flex;flex-direction:column;gap:10px;margin-bottom:1.5rem}
+.user-btn{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .15s;text-align:left}
+.user-btn:hover{background:var(--bg3);border-color:var(--border2)}
+.user-avatar{width:40px;height:40px;border-radius:50%;background:var(--bg4);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.user-name{font-size:14px;font-weight:500;color:var(--text)}
+.user-role{font-size:11px;color:var(--text3);font-family:var(--mono)}
+
+/* PIN */
+.pin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:850;align-items:center;justify-content:center}
+.pin-overlay.open{display:flex}
+.pin-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:2rem 1.75rem;width:280px;text-align:center}
+.pin-title{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.4rem}
+.pin-user{font-size:13px;color:var(--text2);margin-bottom:1.25rem}
+.pin-dots{display:flex;gap:12px;justify-content:center;margin-bottom:1.5rem}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border2);transition:all .15s}
+.pin-dot.filled{background:var(--accent);border-color:var(--accent)}
+.pin-dot.error{background:var(--red);border-color:var(--red)}
+.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:.75rem}
+.pin-key{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text);cursor:pointer;transition:all .1s;user-select:none}
+.pin-key:hover{background:var(--bg4);border-color:var(--border2)}
+.pin-key:active{transform:scale(.93)}
+.pin-key.del{font-size:15px;color:var(--text3)}
+.pin-back{font-size:12px;color:var(--text3);cursor:pointer;font-family:var(--mono);margin-top:.5rem;display:inline-block}
+.pin-back:hover{color:var(--text2)}
+.pin-err{font-size:12px;color:var(--red);font-family:var(--mono);min-height:16px;margin-top:.25rem}
+.pin-attempts{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:.25rem}
+
+/* APP */
+.app{max-width:720px;margin:0 auto;padding:0 0 6rem}
+header{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:1rem 1.25rem .9rem}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.15em;color:var(--accent);text-transform:uppercase;line-height:1.2}
+.logo small{display:block;color:var(--text3);font-weight:400;font-size:10px;letter-spacing:.1em;margin-top:1px}
+.header-right{display:flex;align-items:center;gap:8px}
+.user-chip{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 10px 4px 6px;cursor:pointer;transition:all .15s}
+.user-chip:hover{border-color:var(--border2)}
+.user-chip-av{width:22px;height:22px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:12px}
+.user-chip-name{font-size:11px;color:var(--text2);font-family:var(--mono)}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;animation:pulse 2s infinite}
+.sync-dot.offline{background:var(--text3);box-shadow:none;animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.btn-icon{background:transparent;border:1px solid var(--border);border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;color:var(--text3);transition:all .15s}
+.btn-icon:hover{background:var(--bg3);border-color:var(--border2);color:var(--text)}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:1.25rem 1.25rem .5rem}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:1rem}
+.stat-n{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px}
+.stat-l{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+
+/* TABS */
+.tabs{display:flex;gap:4px;padding:.75rem 1.25rem .25rem;border-bottom:1px solid var(--border)}
+.tab{padding:8px 16px;font-size:13px;font-family:var(--mono);color:var(--text3);cursor:pointer;border-radius:6px;transition:all .15s;border:none;background:none}
+.tab:hover{color:var(--text2);background:var(--bg2)}
+.tab.active{color:var(--accent);background:rgba(245,197,24,.08)}
+
+/* TOOLBAR */
+.toolbar{padding:.75rem 1.25rem;display:flex;gap:10px;align-items:center}
+.search-wrap{flex:1;position:relative}
+.search-wrap input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px 10px 38px;font-size:14px;color:var(--text);font-family:var(--sans);outline:none;transition:border-color .2s}
+.search-wrap input:focus{border-color:var(--accent)}
+.search-wrap input::placeholder{color:var(--text3)}
+.s-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;pointer-events:none}
+
+/* FAB */
+.fab{position:fixed;bottom:calc(1.5rem + env(safe-area-inset-bottom,0));right:1.5rem;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#000;border:none;cursor:pointer;font-size:26px;font-weight:300;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(245,197,24,.35);transition:transform .15s,box-shadow .15s;z-index:60}
+.fab:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(245,197,24,.5)}
+.fab:active{transform:scale(.95)}
+
+/* LIST */
+.list{padding:0 1.25rem;display:flex;flex-direction:column;gap:10px}
+
+/* CARD */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .2s;animation:fadeUp .25s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.card:hover{border-color:var(--border2)}
+.card-body{padding:1rem 1.1rem}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
+.card-name{font-size:15px;font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.3}
+.card-sub{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.card-acts{display:flex;gap:6px;flex-shrink:0}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.tag{font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:4px;background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+.tag-ok{background:var(--green2);color:var(--green);border-color:rgba(0,230,118,.2)}
+.tag-fail{background:var(--red2);color:var(--red);border-color:rgba(255,82,82,.2)}
+.card-price{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--accent)}
+.btn{background:transparent;border:1px solid var(--border);border-radius:6px;padding:7px 13px;font-size:12px;font-family:var(--sans);color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .15s;white-space:nowrap}
+.btn:hover{background:var(--bg3);border-color:var(--border2);color:var(--text)}
+.btn-del{border-color:transparent;color:var(--text3)}
+.btn-del:hover{border-color:var(--red);color:var(--red);background:var(--red2)}
+.empty{text-align:center;padding:4rem 1rem;color:var(--text3);font-size:14px;border:1px dashed var(--border);border-radius:var(--r);margin:0 1.25rem}
+.empty-ico{font-size:40px;display:block;margin-bottom:12px}
+
+/* HISTÓRICO */
+.hist-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;animation:fadeUp .2s ease both}
+.hist-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
+.hist-action{font-size:13px;font-weight:500;color:var(--text)}
+.hist-meta{font-family:var(--mono);font-size:10px;color:var(--text3);text-align:right;line-height:1.6}
+.hist-detail{font-size:12px;color:var(--text2);line-height:1.5}
+.hist-badge{display:inline-block;font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:3px;margin-right:6px}
+.hist-add{background:var(--green2);color:var(--green);border:1px solid rgba(0,230,118,.2)}
+.hist-edit{background:rgba(245,197,24,.1);color:var(--accent);border:1px solid rgba(245,197,24,.2)}
+.hist-del{background:var(--red2);color:var(--red);border:1px solid rgba(255,82,82,.2)}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;align-items:flex-end;justify-content:center}
+.overlay.open{display:flex}
+@media(min-width:600px){.overlay{align-items:center;padding:1rem}}
+.sheet{background:var(--bg2);border:1px solid var(--border);border-radius:16px 16px 0 0;padding:1.5rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom,0));width:100%;max-width:540px;max-height:92dvh;overflow-y:auto;animation:slideUp .25s cubic-bezier(.32,1,.32,1)}
+@media(min-width:600px){.sheet{border-radius:12px;animation:scaleIn .2s ease}}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes scaleIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+.drag-handle{width:36px;height:4px;border-radius:2px;background:var(--border2);margin:0 auto 1.25rem}
+.sheet-title{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.fg2{display:flex;flex-direction:column;gap:6px}
+.fg2.full{grid-column:1/-1}
+.fg2 label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.12em;font-family:var(--mono)}
+.fg2 input,.fg2 select{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:14px;color:var(--text);font-family:var(--sans);outline:none;transition:border-color .2s;-webkit-appearance:none}
+.fg2 input:focus,.fg2 select:focus{border-color:var(--accent)}
+.fg2 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23555' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+.sim-row{display:flex;gap:8px}
+.sim-btn{flex:1;padding:10px 6px;border:1px solid var(--border);border-radius:6px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3);font-family:var(--mono);transition:all .15s;user-select:none}
+.sim-btn:hover{border-color:var(--border2);color:var(--text2)}
+.sim-on{border-color:rgba(0,230,118,.4)!important;background:var(--green2)!important;color:var(--green)!important}
+.sim-off{border-color:rgba(255,82,82,.4)!important;background:var(--red2)!important;color:var(--red)!important}
+.sim-none{border-color:var(--border2)!important;background:var(--bg3)!important;color:var(--text3)!important}
+.sheet-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border)}
+.btn-save{background:var(--accent);color:#000;border:none;border-radius:6px;padding:11px 22px;font-size:14px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:opacity .15s,transform .1s;display:inline-flex;align-items:center;gap:7px}
+.btn-save:hover{opacity:.9}
+.btn-save:active{transform:scale(.97)}
+.btn-save:disabled{opacity:.5;cursor:default}
+.btn-cancel{background:transparent;border:1px solid var(--border);border-radius:6px;padding:11px 18px;font-size:14px;color:var(--text2);font-family:var(--sans);cursor:pointer;transition:all .15s}
+.btn-cancel:hover{background:var(--bg3);color:var(--text)}
+
+/* MENU USUÁRIO */
+.user-menu{display:none;position:fixed;inset:0;z-index:200;align-items:flex-start;justify-content:flex-end;padding:4rem 1rem 0}
+.user-menu.open{display:flex}
+.user-menu-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1rem;min-width:200px;animation:scaleIn .15s ease}
+.um-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);transition:all .15s}
+.um-item:hover{background:var(--bg3);color:var(--text)}
+.um-sep{height:1px;background:var(--border);margin:6px 0}
+
+/* TOAST */
+.toast{position:fixed;bottom:calc(5rem + env(safe-area-inset-bottom,0));left:50%;transform:translateX(-50%) translateY(10px);background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:9px 18px;font-size:13px;color:var(--text);opacity:0;transition:all .25s;z-index:300;white-space:nowrap;pointer-events:none;font-family:var(--mono)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media(max-width:480px){
+  .stats{grid-template-columns:1fr 1fr}
+  .form-grid{grid-template-columns:1fr}
+  .fg2.full{grid-column:1}
+}
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-logo">ESTOQUE</div>
+</div>
+
+<!-- SETUP FIREBASE -->
+<div class="setup-screen" id="setup">
+  <div class="setup-box">
+    <div class="setup-title">⚙ Configuração Inicial</div>
+    <div class="setup-sub">Configure o Firebase uma vez e funciona para sempre em todos os dispositivos.</div>
+    <div class="setup-steps">
+      <div class="step"><span class="step-n">01</span><div class="step-txt">Acesse <strong>console.firebase.google.com</strong> → Criar projeto</div></div>
+      <div class="step"><span class="step-n">02</span><div class="step-txt"><strong>Firestore Database</strong> → Criar banco → Modo produção</div></div>
+      <div class="step"><span class="step-n">03</span><div class="step-txt">Firestore → <strong>Regras</strong> → cole <code style="color:var(--accent);font-size:11px">allow read, write: if true;</code> → Publicar</div></div>
+      <div class="step"><span class="step-n">04</span><div class="step-txt">Configurações do projeto → Seus apps → Web → copie <strong>apiKey</strong> e <strong>projectId</strong></div></div>
+    </div>
+    <div class="fg"><label>API Key</label><input id="cfg-apikey" type="text" placeholder="AIzaSy..."></div>
+    <div class="fg"><label>Project ID</label><input id="cfg-project" type="text" placeholder="meu-projeto-xxxxx"></div>
+    <button class="btn-save" style="width:100%;justify-content:center;margin-top:.5rem" onclick="saveConfig()">✓ Salvar e conectar</button>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">📱 ESTOQUE</div>
+    <div class="login-sub">Selecione seu usuário</div>
+    <div class="user-list" id="user-list"></div>
+    <div style="font-size:11px;color:var(--text3);font-family:var(--mono);cursor:pointer" onclick="abrirGerenciarUsuarios()">+ Gerenciar usuários</div>
+  </div>
+</div>
+
+<!-- PIN -->
+<div class="pin-overlay" id="pin-overlay">
+  <div class="pin-box">
+    <div class="pin-title" id="pin-title">🔒 PIN</div>
+    <div class="pin-user" id="pin-user"></div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-grid">
+      <div class="pin-key" onclick="pinKey('1')">1</div>
+      <div class="pin-key" onclick="pinKey('2')">2</div>
+      <div class="pin-key" onclick="pinKey('3')">3</div>
+      <div class="pin-key" onclick="pinKey('4')">4</div>
+      <div class="pin-key" onclick="pinKey('5')">5</div>
+      <div class="pin-key" onclick="pinKey('6')">6</div>
+      <div class="pin-key" onclick="pinKey('7')">7</div>
+      <div class="pin-key" onclick="pinKey('8')">8</div>
+      <div class="pin-key" onclick="pinKey('9')">9</div>
+      <div class="pin-key del" onclick="pinDel()">⌫</div>
+      <div class="pin-key" onclick="pinKey('0')">0</div>
+      <div class="pin-key del" onclick="pinCancel()">✕</div>
+    </div>
+    <div class="pin-err" id="pin-err"></div>
+    <div class="pin-attempts" id="pin-attempts"></div>
+    <div class="pin-back" onclick="voltarLogin()">← Trocar usuário</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app" style="display:none">
+  <header>
+    <div class="header-inner">
+      <div class="logo">📱 Estoque<small>Celulares Semi Novos</small></div>
+      <div class="header-right">
+        <div class="sync-dot" id="sync-dot"></div>
+        <div class="user-chip" onclick="toggleUserMenu()">
+          <div class="user-chip-av" id="current-av">👤</div>
+          <span class="user-chip-name" id="current-name">—</span>
+        </div>
+        <button class="btn-icon" onclick="abrirConfig()">⚙</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-n" id="s-total">0</div><div class="stat-l">Aparelhos</div></div>
+    <div class="stat"><div class="stat-n" id="s-modelos">0</div><div class="stat-l">Modelos</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tab-estoque" onclick="setTab('estoque')">Estoque</button>
+    <button class="tab" id="tab-hist" onclick="setTab('hist')">Histórico</button>
+  </div>
+
+  <div id="tab-estoque-content">
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="s-icon">🔍</span>
+        <input type="search" id="search" placeholder="Buscar nome, cor..." oninput="renderList()">
+      </div>
+    </div>
+    <div class="list" id="list"></div>
+  </div>
+
+  <div id="tab-hist-content" style="display:none;padding:.75rem 1.25rem">
+    <div class="list" id="hist-list"></div>
+  </div>
+</div>
+
+<button class="fab" id="fab" onclick="pedirPinAcao(()=>openModal())" style="display:none">+</button>
+
+<!-- MODAL APARELHO -->
+<div class="overlay" id="overlay" onclick="bgClick(event)">
+  <div class="sheet">
+    <div class="drag-handle"></div>
+    <div class="sheet-title" id="sheet-title">// Cadastrar Aparelho</div>
+    <div class="form-grid">
+      <div class="fg2 full"><label>Nome / Modelo</label><input id="f-nome" type="text" placeholder="Ex: Samsung Galaxy A55" autocomplete="off"></div>
+      <div class="fg2"><label>Cor</label><input id="f-cor" type="text" placeholder="Ex: Preto" autocomplete="off"></div>
+      <div class="fg2"><label>Armazenamento</label>
+        <select id="f-storage"><option>16 GB</option><option>32 GB</option><option>64 GB</option><option selected>128 GB</option><option>256 GB</option><option>512 GB</option><option>1 TB</option></select>
+      </div>
+      <div class="fg2"><label>RAM</label>
+        <select id="f-ram"><option>2 GB</option><option>3 GB</option><option selected>4 GB</option><option>6 GB</option><option>8 GB</option><option>12 GB</option><option>16 GB</option></select>
+      </div>
+      <div class="fg2"><label>Valor (R$)</label><input id="f-valor" type="number" inputmode="numeric" placeholder="850"></div>
+      <div class="fg2"><label>Data de entrada</label><input id="f-data" type="date"></div>
+      <div class="fg2 full"><label>SIM 1</label>
+        <div class="sim-row">
+          <div class="sim-btn sim-on" id="sim1-ok" onclick="setSim(1,'ok')">✓ Funcionando</div>
+          <div class="sim-btn" id="sim1-fail" onclick="setSim(1,'fail')">✗ Com defeito</div>
+        </div>
+      </div>
+      <div class="fg2 full"><label>SIM 2</label>
+        <div class="sim-row">
+          <div class="sim-btn sim-on" id="sim2-ok" onclick="setSim(2,'ok')">✓ Funcionando</div>
+          <div class="sim-btn" id="sim2-fail" onclick="setSim(2,'fail')">✗ Com defeito</div>
+          <div class="sim-btn" id="sim2-na" onclick="setSim(2,'na')">— Sem SIM 2</div>
+        </div>
+      </div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" id="btn-save" onclick="salvar()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GERENCIAR USUÁRIOS -->
+<div class="overlay" id="users-overlay" onclick="bgClickUsers(event)">
+  <div class="sheet">
+    <div class="drag-handle"></div>
+    <div class="sheet-title">// Usuários</div>
+    <div id="users-mgmt-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.25rem"></div>
+    <button class="btn-save" onclick="abrirNovoUsuario()" style="width:100%;justify-content:center">+ Novo usuário</button>
+    <div class="sheet-footer"><button class="btn-cancel" onclick="fecharGerenciarUsuarios()">Fechar</button></div>
+  </div>
+</div>
+
+<!-- MODAL NOVO/EDITAR USUÁRIO -->
+<div class="overlay" id="new-user-overlay" onclick="bgClickNewUser(event)">
+  <div class="sheet">
+    <div class="drag-handle"></div>
+    <div class="sheet-title" id="new-user-title">// Novo Usuário</div>
+    <div class="form-grid">
+      <div class="fg2 full"><label>Nome</label><input id="nu-nome" type="text" placeholder="Ex: Ygor" autocomplete="off"></div>
+      <div class="fg2 full"><label>Emoji / Avatar</label><input id="nu-emoji" type="text" placeholder="Ex: 👤 ou 🧑" autocomplete="off" maxlength="2"></div>
+      <div class="fg2 full"><label>PIN de 4 dígitos</label><input id="nu-pin" type="password" inputmode="numeric" placeholder="••••" maxlength="4"></div>
+      <div class="fg2 full"><label>Função</label>
+        <select id="nu-role"><option value="admin">Admin (pode tudo)</option><option value="user">Usuário (só visualiza e edita)</option></select>
+      </div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn-cancel" onclick="fecharNovoUsuario()">Cancelar</button>
+      <button class="btn-save" onclick="salvarUsuario()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIG -->
+<div class="overlay" id="cfg-overlay" onclick="bgClickCfg(event)">
+  <div class="sheet">
+    <div class="drag-handle"></div>
+    <div class="sheet-title">// Configurações</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="um-item" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px" onclick="fecharConfig();abrirGerenciarUsuarios()">👥 Gerenciar usuários</div>
+      <div class="um-item" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px" onclick="resetarConfig()">🔗 Reconfigurar Firebase</div>
+    </div>
+    <div class="sheet-footer"><button class="btn-cancel" onclick="fecharConfig()">Fechar</button></div>
+  </div>
+</div>
+
+<!-- USER MENU -->
+<div class="user-menu" id="user-menu" onclick="fecharUserMenu()">
+  <div class="user-menu-box" onclick="event.stopPropagation()">
+    <div class="um-item" id="um-perfil" style="font-weight:500;color:var(--text)"></div>
+    <div class="um-sep"></div>
+    <div class="um-item" onclick="fecharUserMenu();abrirTrocarPin()">🔒 Alterar meu PIN</div>
+    <div class="um-sep"></div>
+    <div class="um-item" onclick="logout()" style="color:var(--red)">⎋ Sair</div>
+  </div>
+</div>
+
+<!-- MODAL SENHA ADMIN -->
+<div class="pin-overlay" id="admin-overlay">
+  <div class="pin-box" style="width:300px">
+    <div class="pin-title">🔐 SENHA DO ADMINISTRADOR</div>
+    <div class="pin-user" id="admin-sub">Necessário para continuar</div>
+    <input id="admin-input" type="password" placeholder="Digite a senha" autocomplete="off"
+      style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:14px;color:var(--text);font-family:var(--mono);outline:none;text-align:center;margin-bottom:10px;letter-spacing:.1em"
+      oninput="document.getElementById('admin-err').textContent=''"
+      onkeydown="if(event.key==='Enter')confirmarAdmin()">
+    <div class="pin-err" id="admin-err"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn-cancel" style="flex:1" onclick="cancelarAdmin()">Cancelar</button>
+      <button class="btn-save" style="flex:1;justify-content:center" onclick="confirmarAdmin()">✓ Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+// ── STATE ──────────────────────────────────────
+let db = null;
+let phones = [], history = [], users = [];
+let editId = null, s1 = 'ok', s2 = 'ok';
+let currentUser = null;
+let editUserId = null;
+let pinBuffer = '', pinCb = null, pinMode = 'verify';
+let activeTab = 'estoque';
+let useLocal = false;
+
+const CFG_KEY  = 'fb_config_v1';
+const SESS_KEY = 'current_user_v1';
+
+// ── HELPERS ────────────────────────────────────
+window.toast = (msg) => {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+};
+const today = () => new Date().toISOString().split('T')[0];
+const fmtDate = d => { if(!d)return'—'; const[y,m,day]=d.split('-'); return`${day}/${m}/${y}`; };
+const fmtTs = ts => {
+  if(!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+};
+const simBadge = (label, v) => {
+  if(v==='ok')   return `<span class="tag tag-ok">${label} ✓</span>`;
+  if(v==='fail') return `<span class="tag tag-fail">${label} ✗</span>`;
+  return `<span class="tag">${label} —</span>`;
+};
+const fmt = v => parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+function hideLoading(){ const l=document.getElementById('loading'); l.classList.add('hidden'); setTimeout(()=>l.style.display='none',350); }
+
+// ── CONFIG ─────────────────────────────────────
+const getConfig = () => { try{ return JSON.parse(localStorage.getItem(CFG_KEY)) }catch{ return null } };
+window.saveConfig = () => {
+  const apiKey = document.getElementById('cfg-apikey').value.trim();
+  const projectId = document.getElementById('cfg-project').value.trim();
+  if(!apiKey||!projectId){ toast('Preencha os dois campos'); return; }
+  localStorage.setItem(CFG_KEY, JSON.stringify({apiKey,projectId}));
+  document.getElementById('setup').classList.remove('show');
+  init(apiKey, projectId);
+};
+window.resetarConfig = () => {
+  if(!confirm('Desconectar Firebase atual?')) return;
+  fecharConfig();
+  localStorage.removeItem(CFG_KEY);
+  toast('Recarregando...'); setTimeout(()=>location.reload(),1000);
+};
+
+// ── FIREBASE ────────────────────────────────────
+async function init(apiKey, projectId){
+  try{
+    const app = initializeApp({apiKey, projectId, authDomain:`${projectId}.firebaseapp.com`});
+    db = getFirestore(app);
+    // Listen phones
+    onSnapshot(query(collection(db,'celulares'), orderBy('ts','asc')), snap=>{
+      phones = snap.docs.map(d=>({id:d.id,...d.data()}));
+      updateStats(); renderList(); renderHist();
+    });
+    // Listen history
+    onSnapshot(query(collection(db,'historico'), orderBy('ts','desc')), snap=>{
+      history = snap.docs.map(d=>({id:d.id,...d.data()}));
+      renderHist();
+    });
+    // Listen users
+    onSnapshot(collection(db,'usuarios'), snap=>{
+      users = snap.docs.map(d=>({id:d.id,...d.data()}));
+      renderLoginUsers();
+      renderUsersMgmt();
+      // restore session
+      const sess = localStorage.getItem(SESS_KEY);
+      if(sess){ const u=users.find(x=>x.id===sess); if(u){ loginUser(u,true); return; } }
+      hideLoading();
+      showLogin();
+    });
+  } catch(e){ toast('Erro Firebase'); hideLoading(); showLogin(); }
+}
+
+// ── USERS ───────────────────────────────────────
+function showLogin(){
+  document.getElementById('login-screen').classList.add('show');
+  document.getElementById('app').style.display='none';
+  document.getElementById('fab').style.display='none';
+}
+function loginUser(u, skipPin=false){
+  if(skipPin){ setCurrentUser(u); return; }
+  // show PIN
+  currentUser = null;
+  document.getElementById('pin-user').textContent = u.emoji+' '+u.nome;
+  document.getElementById('pin-title').textContent = '🔒 PIN';
+  pinBuffer=''; pinMode='verify'; pinCb = ()=>setCurrentUser(u);
+  updatePinDots();
+  document.getElementById('pin-err').textContent='';
+  document.getElementById('pin-attempts').textContent='';
+  document.getElementById('pin-overlay').classList.add('open');
+  // store temp user for pin check
+  window._pendingUser = u;
+}
+function setCurrentUser(u){
+  currentUser = u;
+  localStorage.setItem(SESS_KEY, u.id);
+  document.getElementById('login-screen').classList.remove('show');
+  document.getElementById('pin-overlay').classList.remove('open');
+  document.getElementById('app').style.display='block';
+  document.getElementById('fab').style.display='flex';
+  document.getElementById('current-name').textContent = u.nome;
+  document.getElementById('current-av').textContent = u.emoji||'👤';
+  document.getElementById('um-perfil').textContent = (u.emoji||'👤')+' '+u.nome+' · '+(u.role==='admin'?'Admin':'Usuário');
+  hideLoading();
+  updateStats(); renderList(); renderHist();
+}
+window.voltarLogin = ()=>{
+  document.getElementById('pin-overlay').classList.remove('open');
+  pinBuffer=''; pinCb=null;
+  window._pendingUser=null;
+};
+window.logout = ()=>{
+  fecharUserMenu();
+  localStorage.removeItem(SESS_KEY);
+  currentUser=null;
+  showLogin();
+};
+
+function renderLoginUsers(){
+  const el = document.getElementById('user-list');
+  if(!users.length){
+    el.innerHTML='<div style="color:var(--text3);font-size:13px;text-align:center;padding:1rem">Nenhum usuário criado ainda.</div>';
+    return;
+  }
+  el.innerHTML = users.map(u=>`
+    <div class="user-btn" onclick="window._loginClick('${u.id}')">
+      <div class="user-avatar">${u.emoji||'👤'}</div>
+      <div>
+        <div class="user-name">${u.nome}</div>
+        <div class="user-role">${u.role==='admin'?'Admin':'Usuário'}</div>
+      </div>
+    </div>
+  `).join('');
+}
+window._loginClick = (id)=>{ const u=users.find(x=>x.id===id); if(u) loginUser(u); };
+
+// ── PIN ─────────────────────────────────────────
+window.pinKey = (k)=>{
+  if(pinBuffer.length>=4) return;
+  pinBuffer+=k; updatePinDots();
+  if(pinBuffer.length===4){
+    setTimeout(()=>{
+      if(pinMode==='set'){
+        // salvar novo PIN
+        _savePinForUser(pinBuffer);
+      } else if(pinMode==='verify-action'){
+        if(pinBuffer===currentUser.pin){ closePinModal(); if(pinCb){pinCb();pinCb=null;} }
+        else { pinError(); }
+      } else {
+        // login
+        const u = window._pendingUser;
+        if(u && pinBuffer===u.pin){ closePinModal(); if(pinCb){pinCb();pinCb=null;} }
+        else { pinError(); }
+      }
+    },100);
+  }
+};
+window.pinDel = ()=>{ pinBuffer=pinBuffer.slice(0,-1); updatePinDots(); };
+window.pinCancel = ()=>{ closePinModal(); pinCb=null; };
+function pinError(){
+  document.querySelectorAll('.pin-dot').forEach(d=>d.classList.add('error'));
+  document.getElementById('pin-err').textContent='PIN incorreto';
+  setTimeout(()=>{ pinBuffer=''; updatePinDots(); document.getElementById('pin-err').textContent=''; },700);
+}
+function closePinModal(){ pinBuffer=''; document.getElementById('pin-overlay').classList.remove('open'); updatePinDots(); }
+function updatePinDots(){ for(let i=0;i<4;i++){ const d=document.getElementById('pd'+i); d.classList.remove('filled','error'); if(i<pinBuffer.length)d.classList.add('filled'); } }
+
+// pedir PIN para ação (editar/excluir/cadastrar)
+window.pedirPinAcao = (cb)=>{
+  pinBuffer=''; pinMode='verify-action'; pinCb=cb;
+  document.getElementById('pin-title').textContent='🔒 Confirmar ação';
+  document.getElementById('pin-user').textContent=currentUser.emoji+' '+currentUser.nome;
+  updatePinDots();
+  document.getElementById('pin-err').textContent='';
+  document.getElementById('pin-overlay').classList.add('open');
+};
+
+// trocar PIN do usuário logado
+// ── SENHA ADMIN ──────────────────────────────────
+const ADMIN_PASS = '85086763YYgg.';
+let adminCb = null;
+
+function pedirSenhaAdmin(sub, cb){
+  adminCb = cb;
+  document.getElementById('admin-sub').textContent = sub;
+  document.getElementById('admin-input').value = '';
+  document.getElementById('admin-err').textContent = '';
+  document.getElementById('admin-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('admin-input').focus(), 200);
+}
+window.confirmarAdmin = ()=>{
+  const val = document.getElementById('admin-input').value;
+  if(val === ADMIN_PASS){
+    document.getElementById('admin-overlay').classList.remove('open');
+    if(adminCb){ adminCb(); adminCb=null; }
+  } else {
+    document.getElementById('admin-err').textContent = 'Senha incorreta';
+    document.getElementById('admin-input').value = '';
+    document.getElementById('admin-input').focus();
+  }
+};
+window.cancelarAdmin = ()=>{
+  document.getElementById('admin-overlay').classList.remove('open');
+  adminCb = null;
+};
+
+window.abrirTrocarPin = ()=>{
+  pedirSenhaAdmin('Alterar PIN de ' + (currentUser?.nome||''), ()=>{
+    pinBuffer=''; pinMode='set';
+    document.getElementById('pin-title').textContent='🔒 Novo PIN';
+    document.getElementById('pin-user').textContent='Digite o novo PIN de 4 dígitos';
+    updatePinDots();
+    document.getElementById('pin-err').textContent='';
+    document.getElementById('pin-overlay').classList.add('open');
+  });
+};
+async function _savePinForUser(pin){
+  if(pin.length!==4){ toast('PIN deve ter 4 dígitos'); return; }
+  closePinModal();
+  try{
+    await updateDoc(doc(db,'usuarios',currentUser.id),{pin});
+    currentUser.pin=pin;
+    toast('✓ PIN alterado com sucesso');
+  }catch(e){ toast('Erro ao salvar PIN'); }
+}
+
+// ── GESTÃO DE USUÁRIOS ──────────────────────────
+window.abrirGerenciarUsuarios = ()=>{
+  pedirSenhaAdmin('Gerenciar usuários do sistema', ()=>{
+    fecharUserMenu();
+    renderUsersMgmt();
+    document.getElementById('users-overlay').classList.add('open');
+  });
+};
+window.fecharGerenciarUsuarios = ()=> document.getElementById('users-overlay').classList.remove('open');
+window.bgClickUsers = (e)=>{ if(e.target===document.getElementById('users-overlay')) fecharGerenciarUsuarios(); };
+
+function renderUsersMgmt(){
+  const el=document.getElementById('users-mgmt-list');
+  if(!users.length){ el.innerHTML='<div style="color:var(--text3);font-size:13px">Nenhum usuário.</div>'; return; }
+  el.innerHTML = users.map(u=>`
+    <div style="display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px">
+      <div style="font-size:22px">${u.emoji||'👤'}</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:500">${u.nome}</div>
+        <div style="font-size:11px;color:var(--text3);font-family:var(--mono)">${u.role==='admin'?'Admin':'Usuário'} · PIN: ${u.pin}</div>
+      </div>
+      <button class="btn" style="padding:5px 10px;font-size:11px" onclick="editarUsuario('${u.id}')">✏️</button>
+      <button class="btn btn-del" style="padding:5px 10px;font-size:11px" onclick="deletarUsuario('${u.id}')">🗑</button>
+    </div>
+  `).join('');
+}
+
+window.abrirNovoUsuario = ()=>{
+  pedirSenhaAdmin('Adicionar novo usuário', ()=>{
+    editUserId=null;
+    document.getElementById('new-user-title').textContent='// Novo Usuário';
+    document.getElementById('nu-nome').value='';
+    document.getElementById('nu-emoji').value='👤';
+    document.getElementById('nu-pin').value='';
+    document.getElementById('nu-role').value='user';
+    document.getElementById('new-user-overlay').classList.add('open');
+  });
+};
+window.editarUsuario = (id)=>{
+  pedirSenhaAdmin('Editar usuário', ()=>{
+    const u=users.find(x=>x.id===id); if(!u)return;
+    editUserId=id;
+    document.getElementById('new-user-title').textContent='// Editar Usuário';
+    document.getElementById('nu-nome').value=u.nome;
+    document.getElementById('nu-emoji').value=u.emoji||'👤';
+    document.getElementById('nu-pin').value=u.pin;
+    document.getElementById('nu-role').value=u.role||'user';
+    document.getElementById('new-user-overlay').classList.add('open');
+  });
+};
+window.fecharNovoUsuario = ()=> document.getElementById('new-user-overlay').classList.remove('open');
+window.bgClickNewUser = (e)=>{ if(e.target===document.getElementById('new-user-overlay')) fecharNovoUsuario(); };
+window.salvarUsuario = async ()=>{
+  const nome=document.getElementById('nu-nome').value.trim();
+  const emoji=document.getElementById('nu-emoji').value.trim()||'👤';
+  const pin=document.getElementById('nu-pin').value.trim();
+  const role=document.getElementById('nu-role').value;
+  if(!nome){ toast('Informe o nome'); return; }
+  if(pin.length!==4||isNaN(pin)){ toast('PIN deve ter 4 números'); return; }
+  try{
+    if(editUserId){ await updateDoc(doc(db,'usuarios',editUserId),{nome,emoji,pin,role}); toast('✓ Usuário atualizado'); }
+    else { await addDoc(collection(db,'usuarios'),{nome,emoji,pin,role,criadoEm:serverTimestamp()}); toast('✓ Usuário criado'); }
+    fecharNovoUsuario();
+  }catch(e){ toast('Erro ao salvar usuário'); }
+};
+window.deletarUsuario = (id)=>{
+  pedirSenhaAdmin('Excluir usuário', async ()=>{
+    if(!confirm('Excluir este usuário?')) return;
+    await deleteDoc(doc(db,'usuarios',id));
+    toast('Usuário removido');
+  });
+};
+
+// ── HISTÓRICO ───────────────────────────────────
+async function registrarHistorico(acao, aparelho, detalhe=''){
+  if(!db) return;
+  try{
+    await addDoc(collection(db,'historico'),{
+      acao, aparelho, detalhe,
+      usuario: currentUser?.nome||'—',
+      usuarioEmoji: currentUser?.emoji||'👤',
+      ts: serverTimestamp()
+    });
+  }catch(e){ console.error(e); }
+}
+function renderHist(){
+  if(activeTab!=='hist') return;
+  const el=document.getElementById('hist-list');
+  if(!history.length){ el.innerHTML='<div class="empty"><span class="empty-ico">📋</span>Nenhuma alteração registrada.</div>'; return; }
+  el.innerHTML = history.map((h,i)=>{
+    const badge = h.acao==='Cadastro' ? 'hist-add' : h.acao==='Edição' ? 'hist-edit' : 'hist-del';
+    return `<div class="hist-item" style="animation-delay:${i*30}ms">
+      <div class="hist-header">
+        <div class="hist-action"><span class="hist-badge ${badge}">${h.acao}</span>${h.aparelho||''}</div>
+        <div class="hist-meta">${h.usuarioEmoji||'👤'} ${h.usuario||'—'}<br>${fmtTs(h.ts)}</div>
+      </div>
+      ${h.detalhe?`<div class="hist-detail">${h.detalhe}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ── TABS ────────────────────────────────────────
+window.setTab = (tab)=>{
+  activeTab=tab;
+  document.getElementById('tab-estoque-content').style.display = tab==='estoque'?'block':'none';
+  document.getElementById('tab-hist-content').style.display = tab==='hist'?'block':'none';
+  document.getElementById('tab-estoque').classList.toggle('active',tab==='estoque');
+  document.getElementById('tab-hist').classList.toggle('active',tab==='hist');
+  document.getElementById('fab').style.display = tab==='estoque'?'flex':'none';
+  if(tab==='hist') renderHist();
+};
+
+// ── STATS ────────────────────────────────────────
+function updateStats(){
+  document.getElementById('s-total').textContent=phones.length;
+  document.getElementById('s-modelos').textContent=new Set(phones.map(p=>p.nome)).size;
+}
+
+// ── SIM ──────────────────────────────────────────
+window.setSim = (n,v)=>{
+  if(n===1){ s1=v; document.getElementById('sim1-ok').className='sim-btn'+(v==='ok'?' sim-on':''); document.getElementById('sim1-fail').className='sim-btn'+(v==='fail'?' sim-off':''); }
+  else { s2=v; document.getElementById('sim2-ok').className='sim-btn'+(v==='ok'?' sim-on':''); document.getElementById('sim2-fail').className='sim-btn'+(v==='fail'?' sim-off':''); document.getElementById('sim2-na').className='sim-btn'+(v==='na'?' sim-none':''); }
+};
+
+// ── MODAL APARELHO ───────────────────────────────
+window.openModal = (id)=>{
+  editId=id||null; s1='ok'; s2='ok';
+  const p=id?phones.find(x=>x.id===id):null;
+  document.getElementById('sheet-title').textContent=id?'// Editar Aparelho':'// Cadastrar Aparelho';
+  document.getElementById('f-nome').value=p?.nome||'';
+  document.getElementById('f-cor').value=p?.cor||'';
+  document.getElementById('f-storage').value=p?.storage||'128 GB';
+  document.getElementById('f-ram').value=p?.ram||'4 GB';
+  document.getElementById('f-valor').value=p?.valor||'';
+  document.getElementById('f-data').value=p?.data||today();
+  if(p){ s1=p.sim1||'ok'; s2=p.sim2||'ok'; }
+  setSim(1,s1); setSim(2,s2);
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('f-nome').focus(),300);
+};
+window.closeModal = ()=>{ document.getElementById('overlay').classList.remove('open'); editId=null; };
+window.bgClick = (e)=>{ if(e.target===document.getElementById('overlay')) closeModal(); };
+
+window.salvar = async ()=>{
+  const nome=document.getElementById('f-nome').value.trim();
+  if(!nome){ toast('Informe o nome do aparelho'); return; }
+  const btn=document.getElementById('btn-save');
+  btn.disabled=true; btn.textContent='Salvando...';
+  const data={ nome, cor:document.getElementById('f-cor').value.trim(), storage:document.getElementById('f-storage').value, ram:document.getElementById('f-ram').value, valor:document.getElementById('f-valor').value, data:document.getElementById('f-data').value, sim1:s1, sim2:s2 };
+  try{
+    if(editId){
+      const old=phones.find(x=>x.id===editId);
+      await updateDoc(doc(db,'celulares',editId),data);
+      const diffs=[];
+      if(old.nome!==data.nome) diffs.push(`Nome: ${old.nome} → ${data.nome}`);
+      if(old.cor!==data.cor) diffs.push(`Cor: ${old.cor} → ${data.cor}`);
+      if(old.storage!==data.storage) diffs.push(`Storage: ${old.storage} → ${data.storage}`);
+      if(old.ram!==data.ram) diffs.push(`RAM: ${old.ram} → ${data.ram}`);
+      if(old.valor!==data.valor) diffs.push(`Valor: R$${fmt(old.valor)} → R$${fmt(data.valor)}`);
+      if(old.sim1!==data.sim1) diffs.push(`SIM1: ${old.sim1} → ${data.sim1}`);
+      if(old.sim2!==data.sim2) diffs.push(`SIM2: ${old.sim2} → ${data.sim2}`);
+      await registrarHistorico('Edição', data.nome, diffs.length?diffs.join(' | '):'Sem alterações detectadas');
+      toast('✓ Atualizado');
+    } else {
+      await addDoc(collection(db,'celulares'),{...data,ts:serverTimestamp()});
+      await registrarHistorico('Cadastro', data.nome, `${data.storage} · ${data.ram} RAM · R$${fmt(data.valor)}`);
+      toast('✓ Cadastrado');
+    }
+    closeModal();
+  }catch(e){ toast('Erro ao salvar'); }
+  btn.disabled=false; btn.innerHTML='💾 Salvar';
+};
+
+window.excluir = async (id)=>{
+  pedirPinAcao(async ()=>{
+    const p=phones.find(x=>x.id===id);
+    if(!confirm('Excluir '+p?.nome+'?')) return;
+    await deleteDoc(doc(db,'celulares',id));
+    await registrarHistorico('Exclusão', p?.nome||id, `${p?.storage} · ${p?.ram} · R$${fmt(p?.valor)}`);
+    toast('Removido');
+  });
+};
+
+// ── RENDER LIST ──────────────────────────────────
+window.renderList = ()=>{
+  const q=(document.getElementById('search')?.value||'').toLowerCase();
+  const el=document.getElementById('list');
+  const f=phones.filter(p=>!q||p.nome?.toLowerCase().includes(q)||(p.cor||'').toLowerCase().includes(q));
+  if(!f.length){ el.innerHTML=`<div class="empty"><span class="empty-ico">📦</span>${phones.length?'Nenhum resultado.':'Nenhum aparelho cadastrado.<br>Toque no + para começar.'}</div>`; return; }
+  el.innerHTML=f.map((p,i)=>`
+    <div class="card" style="animation-delay:${i*40}ms">
+      <div class="card-body">
+        <div class="card-top">
+          <div>
+            <div class="card-name">${p.nome}</div>
+            <div class="card-sub">${p.cor||'—'} · ${fmtDate(p.data)}</div>
+          </div>
+          <div class="card-acts">
+            <button class="btn" onclick="pedirPinAcao(()=>openModal('${p.id}'))">✏️ Editar</button>
+            <button class="btn btn-del" onclick="excluir('${p.id}')">🗑</button>
+          </div>
+        </div>
+        <div class="tags">
+          <span class="tag">💾 ${p.storage}</span>
+          <span class="tag">⚡ ${p.ram} RAM</span>
+          ${simBadge('SIM1',p.sim1)}${simBadge('SIM2',p.sim2)}
+        </div>
+        <div class="card-price">R$ ${fmt(p.valor)}</div>
+      </div>
+    </div>
+  `).join('');
+};
+
+// ── USER MENU ────────────────────────────────────
+window.toggleUserMenu = ()=> document.getElementById('user-menu').classList.toggle('open');
+window.fecharUserMenu = ()=> document.getElementById('user-menu').classList.remove('open');
+
+// ── CONFIG ────────────────────────────────────────
+window.abrirConfig = ()=> document.getElementById('cfg-overlay').classList.add('open');
+window.fecharConfig = ()=> document.getElementById('cfg-overlay').classList.remove('open');
+window.bgClickCfg = (e)=>{ if(e.target===document.getElementById('cfg-overlay')) fecharConfig(); };
+
+// ── BOOT ─────────────────────────────────────────
+const cfg=getConfig();
+if(cfg){ init(cfg.apiKey,cfg.projectId); }
+else{ hideLoading(); document.getElementById('setup').classList.add('show'); }
+
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
