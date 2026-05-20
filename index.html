@@ -836,6 +836,17 @@ window.salvar = async ()=>{
   btn.disabled=false; btn.innerHTML='💾 Salvar';
 };
 
+window.duplicar = async (id)=>{
+  const p = phones.find(x=>x.id===id);
+  if(!p) return;
+  try{
+    const novo = { nome:p.nome, cor:p.cor, storage:p.storage, ram:p.ram, valor:p.valor, data:today(), sim1:p.sim1, sim2:p.sim2, ts:serverTimestamp() };
+    await addDoc(collection(db,'celulares'), novo);
+    await registrarHistorico('Cadastro', p.nome, `Duplicado de outro registro · ${p.storage} · ${p.ram} · R$${fmt(p.valor)}`);
+    toast('✓ Aparelho duplicado');
+  } catch(e){ toast('Erro ao duplicar'); }
+};
+
 window.excluir = async (id)=>{
   pedirPinAcao(async ()=>{
     const p=phones.find(x=>x.id===id);
@@ -862,6 +873,7 @@ window.renderList = ()=>{
           </div>
           <div class="card-acts">
             <button class="btn" onclick="pedirPinAcao(()=>openModal('${p.id}'))">✏️ Editar</button>
+            <button class="btn" onclick="pedirPinAcao(()=>duplicar('${p.id}'))" title="Duplicar">⧉</button>
             <button class="btn btn-del" onclick="excluir('${p.id}')">🗑</button>
           </div>
         </div>
