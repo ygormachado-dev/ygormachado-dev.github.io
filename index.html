@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f5c518">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Estoque">
+<title>Estoque de Celulares</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #0a0a0a;
+  --bg2:     #141414;
+  --bg3:     #1e1e1e;
+  --bg4:     #282828;
+  --border:  #2a2a2a;
+  --border2: #333;
+  --text:    #f2ede4;
+  --text2:   #888;
+  --text3:   #444;
+  --accent:  #f5c518;
+  --green:   #00e676;
+  --green2:  rgba(0,230,118,.1);
+  --red:     #ff5252;
+  --red2:    rgba(255,82,82,.1);
+  --r:       8px;
+  --mono:    'Space Mono', monospace;
+  --sans:    'DM Sans', sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  min-height:100dvh;
+  overscroll-behavior:none;
+}
+
+/* ── LAYOUT ─────────────────────────── */
+.app{max-width:720px;margin:0 auto;padding:env(safe-area-inset-top,0) 0 6rem}
+
+/* ── HEADER ─────────────────────────── */
+header{
+  position:sticky;top:0;z-index:50;
+  background:rgba(10,10,10,.92);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+  padding:1rem 1.25rem .9rem;
+}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{
+  font-family:var(--mono);
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.15em;
+  color:var(--accent);
+  text-transform:uppercase;
+  line-height:1.2;
+}
+.logo small{display:block;color:var(--text3);font-weight:400;font-size:10px;letter-spacing:.1em;margin-top:1px}
+.sync-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 6px var(--green);
+  flex-shrink:0;
+  animation:pulse 2s infinite;
+}
+.sync-dot.offline{background:var(--text3);box-shadow:none;animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── STATS ──────────────────────────── */
+.stats{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+  padding:1.25rem 1.25rem .5rem;
+}
+.stat{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:1rem;
+  transition:border-color .2s;
+}
+.stat:hover{border-color:var(--border2)}
+.stat-n{
+  font-family:var(--mono);
+  font-size:20px;font-weight:700;
+  color:var(--text);margin-bottom:4px;
+}
+.stat-l{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+
+/* ── TOOLBAR ────────────────────────── */
+.toolbar{padding:.75rem 1.25rem;display:flex;gap:10px;align-items:center}
+.search-wrap{flex:1;position:relative}
+.search-wrap input{
+  width:100%;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:10px 12px 10px 38px;
+  font-size:14px;
+  color:var(--text);
+  font-family:var(--sans);
+  outline:none;
+  transition:border-color .2s;
+}
+.search-wrap input:focus{border-color:var(--accent)}
+.search-wrap input::placeholder{color:var(--text3)}
+.s-icon{
+  position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  color:var(--text3);font-size:15px;pointer-events:none;
+}
+
+/* ── FAB ────────────────────────────── */
+.fab{
+  position:fixed;bottom:calc(1.5rem + env(safe-area-inset-bottom,0));right:1.5rem;
+  width:56px;height:56px;border-radius:50%;
+  background:var(--accent);color:#000;
+  border:none;cursor:pointer;
+  font-size:26px;font-weight:300;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 20px rgba(245,197,24,.35);
+  transition:transform .15s,box-shadow .15s;
+  z-index:60;
+}
+.fab:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(245,197,24,.5)}
+.fab:active{transform:scale(.95)}
+
+/* ── LIST ───────────────────────────── */
+.list{padding:0 1.25rem;display:flex;flex-direction:column;gap:10px}
+
+/* ── CARD ───────────────────────────── */
+.card{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+  transition:border-color .2s,transform .15s;
+  animation:fadeUp .25s ease both;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.card:hover{border-color:var(--border2)}
+.card-body{padding:1rem 1.1rem}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
+.card-name{font-size:15px;font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.3}
+.card-sub{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.card-acts{display:flex;gap:6px;flex-shrink:0}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.tag{
+  font-family:var(--mono);font-size:10px;
+  padding:3px 9px;border-radius:4px;
+  background:var(--bg3);color:var(--text2);
+  border:1px solid var(--border);
+}
+.tag-ok{background:var(--green2);color:var(--green);border-color:rgba(0,230,118,.2)}
+.tag-fail{background:var(--red2);color:var(--red);border-color:rgba(255,82,82,.2)}
+.card-price{
+  font-family:var(--mono);font-size:17px;font-weight:700;
+  color:var(--accent);
+}
+
+/* ── BTNS ───────────────────────────── */
+.btn{
+  background:transparent;
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:7px 13px;
+  font-size:12px;
+  font-family:var(--sans);
+  color:var(--text2);
+  cursor:pointer;
+  display:inline-flex;align-items:center;gap:5px;
+  transition:all .15s;
+  white-space:nowrap;
+}
+.btn:hover{background:var(--bg3);border-color:var(--border2);color:var(--text)}
+.btn-del{border-color:transparent;color:var(--text3)}
+.btn-del:hover{border-color:var(--red);color:var(--red);background:var(--red2)}
+
+/* ── EMPTY ──────────────────────────── */
+.empty{
+  text-align:center;padding:4rem 1rem;
+  color:var(--text3);font-size:14px;
+  border:1px dashed var(--border);
+  border-radius:var(--r);
+  margin:0 1.25rem;
+}
+.empty-ico{font-size:40px;display:block;margin-bottom:12px}
+
+/* ── MODAL ──────────────────────────── */
+.overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.75);
+  z-index:100;
+  align-items:flex-end;
+  justify-content:center;
+  padding:0;
+}
+.overlay.open{display:flex}
+@media(min-width:600px){
+  .overlay{align-items:center;padding:1rem}
+}
+.sheet{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:16px 16px 0 0;
+  padding:1.5rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom,0));
+  width:100%;max-width:540px;
+  max-height:92dvh;overflow-y:auto;
+  animation:slideUp .25s cubic-bezier(.32,1,.32,1);
+}
+@media(min-width:600px){
+  .sheet{border-radius:12px;animation:scaleIn .2s ease}
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes scaleIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+
+.drag-handle{
+  width:36px;height:4px;border-radius:2px;
+  background:var(--border2);
+  margin:0 auto 1.25rem;
+}
+.sheet-title{
+  font-family:var(--mono);font-size:13px;font-weight:700;
+  color:var(--accent);letter-spacing:.1em;text-transform:uppercase;
+  margin-bottom:1.25rem;padding-bottom:1rem;
+  border-bottom:1px solid var(--border);
+}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.fg{display:flex;flex-direction:column;gap:6px}
+.fg.full{grid-column:1/-1}
+.fg label{
+  font-size:10px;color:var(--text3);
+  text-transform:uppercase;letter-spacing:.12em;
+  font-family:var(--mono);
+}
+.fg input,.fg select{
+  background:var(--bg3);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:10px 12px;
+  font-size:14px;
+  color:var(--text);
+  font-family:var(--sans);
+  outline:none;
+  transition:border-color .2s;
+  -webkit-appearance:none;
+}
+.fg input:focus,.fg select:focus{border-color:var(--accent)}
+.fg select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23555' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+
+.sim-row{display:flex;gap:8px}
+.sim-btn{
+  flex:1;padding:10px 6px;
+  border:1px solid var(--border);
+  border-radius:6px;text-align:center;
+  cursor:pointer;font-size:12px;
+  color:var(--text3);
+  font-family:var(--mono);
+  transition:all .15s;
+  user-select:none;
+}
+.sim-btn:hover{border-color:var(--border2);color:var(--text2)}
+.sim-on{border-color:rgba(0,230,118,.4)!important;background:var(--green2)!important;color:var(--green)!important}
+.sim-off{border-color:rgba(255,82,82,.4)!important;background:var(--red2)!important;color:var(--red)!important}
+.sim-none{border-color:var(--border2)!important;background:var(--bg3)!important;color:var(--text3)!important}
+
+.sheet-footer{
+  display:flex;gap:8px;justify-content:flex-end;
+  margin-top:1.5rem;padding-top:1rem;
+  border-top:1px solid var(--border);
+}
+.btn-save{
+  background:var(--accent);color:#000;
+  border:none;border-radius:6px;
+  padding:11px 22px;font-size:14px;font-weight:600;
+  font-family:var(--sans);cursor:pointer;
+  transition:opacity .15s,transform .1s;
+  display:inline-flex;align-items:center;gap:7px;
+}
+.btn-save:hover{opacity:.9}
+.btn-save:active{transform:scale(.97)}
+.btn-save:disabled{opacity:.5;cursor:default}
+.btn-cancel{
+  background:transparent;border:1px solid var(--border);
+  border-radius:6px;padding:11px 18px;
+  font-size:14px;color:var(--text2);
+  font-family:var(--sans);cursor:pointer;
+  transition:all .15s;
+}
+.btn-cancel:hover{background:var(--bg3);color:var(--text)}
+
+/* ── TOAST ──────────────────────────── */
+.toast{
+  position:fixed;bottom:calc(5rem + env(safe-area-inset-bottom,0));
+  left:50%;transform:translateX(-50%) translateY(10px);
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:20px;padding:9px 18px;
+  font-size:13px;color:var(--text);
+  opacity:0;transition:all .25s;z-index:300;
+  white-space:nowrap;pointer-events:none;
+  font-family:var(--mono);
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── LOADING ────────────────────────── */
+.loading-screen{
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:16px;z-index:500;
+  transition:opacity .3s;
+}
+.loading-screen.hidden{opacity:0;pointer-events:none}
+.spinner{
+  width:32px;height:32px;
+  border:2px solid var(--border2);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-logo{font-family:var(--mono);font-size:13px;color:var(--accent);letter-spacing:.15em}
+
+/* ── SETUP SCREEN ───────────────────── */
+.setup-screen{
+  display:none;position:fixed;inset:0;
+  background:var(--bg);z-index:400;
+  align-items:center;justify-content:center;
+  padding:2rem;
+}
+.setup-screen.show{display:flex}
+.setup-box{
+  max-width:440px;width:100%;
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:12px;padding:2rem;
+}
+.setup-title{
+  font-family:var(--mono);font-size:14px;font-weight:700;
+  color:var(--accent);letter-spacing:.1em;text-transform:uppercase;
+  margin-bottom:.5rem;
+}
+.setup-sub{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:1.5rem}
+.setup-steps{display:flex;flex-direction:column;gap:12px;margin-bottom:1.5rem}
+.step{
+  display:flex;gap:12px;align-items:flex-start;
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:8px;padding:12px;
+}
+.step-n{
+  font-family:var(--mono);font-size:11px;font-weight:700;
+  color:var(--accent);background:rgba(245,197,24,.1);
+  border:1px solid rgba(245,197,24,.2);
+  border-radius:4px;padding:2px 8px;flex-shrink:0;margin-top:1px;
+}
+.step-txt{font-size:13px;color:var(--text2);line-height:1.5}
+.step-txt strong{color:var(--text);font-weight:600}
+.setup-input-row{display:flex;gap:8px}
+.setup-input-row input{
+  flex:1;background:var(--bg3);border:1px solid var(--border);
+  border-radius:6px;padding:10px 12px;
+  font-size:13px;color:var(--text);
+  font-family:var(--mono);outline:none;
+}
+.setup-input-row input:focus{border-color:var(--accent)}
+.setup-input-row input::placeholder{color:var(--text3)}
+
+@media(max-width:480px){
+  .stats{grid-template-columns:1fr 1fr}
+  .stats .stat:last-child{grid-column:1/-1}
+  .form-grid{grid-template-columns:1fr}
+  .fg.full{grid-column:1}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-logo">ESTOQUE</div>
+</div>
+
+<!-- SETUP: Firebase config -->
+<div class="setup-screen" id="setup">
+  <div class="setup-box">
+    <div class="setup-title">⚙ Configuração Inicial</div>
+    <div class="setup-sub">Para sincronizar entre dispositivos, o app usa o <strong>Firebase</strong> (gratuito). Configure uma vez e funciona para sempre.</div>
+    <div class="setup-steps">
+      <div class="step">
+        <span class="step-n">01</span>
+        <div class="step-txt">Acesse <strong>console.firebase.google.com</strong> → Criar projeto (grátis)</div>
+      </div>
+      <div class="step">
+        <span class="step-n">02</span>
+        <div class="step-txt">Vá em <strong>Firestore Database</strong> → Criar banco → Modo de produção</div>
+      </div>
+      <div class="step">
+        <span class="step-n">03</span>
+        <div class="step-txt">Em <strong>Configurações do projeto → Seus aplicativos → Web</strong>, copie o <strong>apiKey</strong> e <strong>projectId</strong></div>
+      </div>
+      <div class="step">
+        <span class="step-n">04</span>
+        <div class="step-txt">Em Firestore → <strong>Regras</strong>, cole: <code style="font-family:var(--mono);font-size:11px;color:var(--accent)">allow read, write: if true;</code> e publique</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:1.25rem">
+      <div class="fg">
+        <label>API Key do Firebase</label>
+        <input type="text" id="cfg-apikey" placeholder="AIzaSy...">
+      </div>
+      <div class="fg">
+        <label>Project ID</label>
+        <input type="text" id="cfg-project" placeholder="meu-projeto-xxxxx">
+      </div>
+    </div>
+    <button class="btn-save" style="width:100%;justify-content:center" onclick="saveConfig()">
+      ✓ Salvar e conectar
+    </button>
+    <div style="margin-top:1rem;text-align:center">
+      <button class="btn-cancel" style="font-size:12px;border:none;color:var(--text3)" onclick="useLocalOnly()">
+        Usar só neste dispositivo (sem sync)
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app">
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        📱 Estoque
+        <small>Celulares Semi Novos</small>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="sync-dot" id="sync-dot" title="Sincronizado"></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-n" id="s-total">0</div>
+      <div class="stat-l">Aparelhos</div>
+    </div>
+    <div class="stat">
+      <div class="stat-n" id="s-valor">R$0</div>
+      <div class="stat-l">Valor total</div>
+    </div>
+    <div class="stat">
+      <div class="stat-n" id="s-modelos">0</div>
+      <div class="stat-l">Modelos</div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="s-icon">🔍</span>
+      <input type="search" id="search" placeholder="Buscar nome, cor..." oninput="render()">
+    </div>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<button class="fab" onclick="openModal()" title="Cadastrar aparelho">+</button>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="bgClick(event)">
+  <div class="sheet" id="sheet">
+    <div class="drag-handle"></div>
+    <div class="sheet-title" id="sheet-title">// Cadastrar Aparelho</div>
+    <div class="form-grid">
+      <div class="fg full">
+        <label>Nome / Modelo</label>
+        <input id="f-nome" type="text" placeholder="Ex: Samsung Galaxy A55" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Cor</label>
+        <input id="f-cor" type="text" placeholder="Ex: Preto" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Armazenamento</label>
+        <select id="f-storage">
+          <option>16 GB</option><option>32 GB</option><option>64 GB</option>
+          <option selected>128 GB</option><option>256 GB</option>
+          <option>512 GB</option><option>1 TB</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>RAM</label>
+        <select id="f-ram">
+          <option>2 GB</option><option>3 GB</option>
+          <option selected>4 GB</option><option>6 GB</option>
+          <option>8 GB</option><option>12 GB</option><option>16 GB</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Valor (R$)</label>
+        <input id="f-valor" type="number" inputmode="numeric" placeholder="850">
+      </div>
+      <div class="fg">
+        <label>Data de entrada</label>
+        <input id="f-data" type="date">
+      </div>
+      <div class="fg full">
+        <label>SIM 1</label>
+        <div class="sim-row">
+          <div class="sim-btn sim-on" id="sim1-ok"   onclick="setSim(1,'ok')">✓ Funcionando</div>
+          <div class="sim-btn"        id="sim1-fail" onclick="setSim(1,'fail')">✗ Com defeito</div>
+        </div>
+      </div>
+      <div class="fg full">
+        <label>SIM 2</label>
+        <div class="sim-row">
+          <div class="sim-btn sim-on" id="sim2-ok"   onclick="setSim(2,'ok')">✓ Funcionando</div>
+          <div class="sim-btn"        id="sim2-fail" onclick="setSim(2,'fail')">✗ Com defeito</div>
+          <div class="sim-btn"        id="sim2-na"   onclick="setSim(2,'na')">— Sem SIM 2</div>
+        </div>
+      </div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" id="btn-save" onclick="salvar()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp }                    from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import {
+  getFirestore, collection, doc,
+  onSnapshot, addDoc, updateDoc,
+  deleteDoc, serverTimestamp, query, orderBy
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+// ── STATE ─────────────────────────────────────
+let db = null, unsubscribe = null;
+let phones = [];
+let editId  = null;
+let s1 = 'ok', s2 = 'ok';
+let useLocal = false;
+
+// ── CONFIG ────────────────────────────────────
+const CFG_KEY = 'fb_config_v1';
+const LOCAL_KEY = 'phones_local_v1';
+
+function getConfig(){ try{ return JSON.parse(localStorage.getItem(CFG_KEY)) }catch{return null} }
+
+window.saveConfig = function(){
+  const apiKey    = document.getElementById('cfg-apikey').value.trim();
+  const projectId = document.getElementById('cfg-project').value.trim();
+  if(!apiKey || !projectId){ toast('Preencha os dois campos'); return; }
+  localStorage.setItem(CFG_KEY, JSON.stringify({ apiKey, projectId }));
+  document.getElementById('setup').classList.remove('show');
+  init(apiKey, projectId);
+};
+
+window.useLocalOnly = function(){
+  useLocal = true;
+  document.getElementById('setup').classList.remove('show');
+  phones = JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]');
+  document.getElementById('sync-dot').classList.add('offline');
+  document.getElementById('sync-dot').title = 'Modo local — sem sync';
+  hideLoading();
+  render();
+};
+
+function hideLoading(){
+  const l = document.getElementById('loading');
+  l.classList.add('hidden');
+  setTimeout(()=>l.style.display='none', 350);
+}
+
+// ── FIREBASE INIT ──────────────────────────────
+async function init(apiKey, projectId){
+  try {
+    const app = initializeApp({ apiKey, projectId, authDomain:`${projectId}.firebaseapp.com` });
+    db = getFirestore(app);
+    const col = collection(db, 'celulares');
+    const q = query(col, orderBy('ts', 'asc'));
+    unsubscribe = onSnapshot(q, snap => {
+      phones = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      hideLoading();
+      updateStats();
+      render();
+    }, err => {
+      console.error(err);
+      toast('Erro na conexão com o banco');
+      hideLoading();
+    });
+  } catch(e){
+    toast('Erro ao conectar Firebase');
+    hideLoading();
+  }
+}
+
+// ── LOCAL SAVE ────────────────────────────────
+function localSave(){
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(phones));
+  updateStats();
+  render();
+}
+
+// ── STATS ──────────────────────────────────────
+window.updateStats = function(){
+  document.getElementById('s-total').textContent = phones.length;
+  const tot = phones.reduce((a,p) => a+(parseFloat(p.valor)||0), 0);
+  document.getElementById('s-valor').textContent =
+    'R$'+tot.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+  document.getElementById('s-modelos').textContent = new Set(phones.map(p=>p.nome)).size;
+};
+
+// ── SIM TOGGLE ─────────────────────────────────
+window.setSim = function(n, v){
+  if(n===1){
+    s1=v;
+    document.getElementById('sim1-ok').className   = 'sim-btn'+(v==='ok' ?' sim-on':'');
+    document.getElementById('sim1-fail').className = 'sim-btn'+(v==='fail'?' sim-off':'');
+  } else {
+    s2=v;
+    document.getElementById('sim2-ok').className   = 'sim-btn'+(v==='ok' ?' sim-on':'');
+    document.getElementById('sim2-fail').className = 'sim-btn'+(v==='fail'?' sim-off':'');
+    document.getElementById('sim2-na').className   = 'sim-btn'+(v==='na' ?' sim-none':'');
+  }
+};
+
+// ── MODAL ──────────────────────────────────────
+window.openModal = function(id){
+  editId = id||null; s1='ok'; s2='ok';
+  const p = id ? phones.find(x=>x.id===id) : null;
+  document.getElementById('sheet-title').textContent = id ? '// Editar Aparelho' : '// Cadastrar Aparelho';
+  document.getElementById('f-nome').value    = p?.nome   || '';
+  document.getElementById('f-cor').value     = p?.cor    || '';
+  document.getElementById('f-storage').value = p?.storage|| '128 GB';
+  document.getElementById('f-ram').value     = p?.ram    || '4 GB';
+  document.getElementById('f-valor').value   = p?.valor  || '';
+  document.getElementById('f-data').value    = p?.data   || today();
+  if(p){ s1=p.sim1||'ok'; s2=p.sim2||'ok'; }
+  setSim(1,s1); setSim(2,s2);
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('f-nome').focus(), 300);
+};
+
+window.closeModal = function(){
+  document.getElementById('overlay').classList.remove('open');
+  editId=null;
+};
+
+window.bgClick = function(e){
+  if(e.target===document.getElementById('overlay')) closeModal();
+};
+
+// ── SAVE ───────────────────────────────────────
+window.salvar = async function(){
+  const nome = document.getElementById('f-nome').value.trim();
+  if(!nome){ toast('Informe o nome do aparelho'); return; }
+  const btn = document.getElementById('btn-save');
+  btn.disabled=true; btn.textContent='Salvando...';
+
+  const data = {
+    nome,
+    cor:     document.getElementById('f-cor').value.trim(),
+    storage: document.getElementById('f-storage').value,
+    ram:     document.getElementById('f-ram').value,
+    valor:   document.getElementById('f-valor').value,
+    data:    document.getElementById('f-data').value,
+    sim1: s1, sim2: s2,
+  };
+
+  try {
+    if(useLocal){
+      if(editId){ phones=phones.map(p=>p.id===editId?{...data,id:editId}:p); }
+      else{ phones.push({...data, id:Date.now().toString()}); }
+      localSave();
+    } else if(db){
+      if(editId){ await updateDoc(doc(db,'celulares',editId), data); }
+      else { await addDoc(collection(db,'celulares'),{...data, ts:serverTimestamp()}); }
+    }
+    closeModal();
+    toast(editId ? '✓ Atualizado' : '✓ Cadastrado');
+  } catch(e){
+    toast('Erro ao salvar');
+    console.error(e);
+  }
+  btn.disabled=false; btn.innerHTML='💾 Salvar';
+};
+
+// ── DELETE ─────────────────────────────────────
+window.excluir = async function(id){
+  if(!confirm('Excluir este aparelho?')) return;
+  if(useLocal){
+    phones=phones.filter(p=>p.id!==id);
+    localSave();
+  } else if(db){
+    await deleteDoc(doc(db,'celulares',id));
+  }
+  toast('Removido');
+};
+
+// ── RENDER ─────────────────────────────────────
+window.render = function(){
+  const q = (document.getElementById('search')?.value||'').toLowerCase();
+  const el = document.getElementById('list');
+  const f = phones.filter(p => !q ||
+    p.nome?.toLowerCase().includes(q) ||
+    (p.cor||'').toLowerCase().includes(q)
+  );
+
+  if(!f.length){
+    el.innerHTML = `<div class="empty">
+      <span class="empty-ico">📦</span>
+      ${phones.length ? 'Nenhum resultado.' : 'Nenhum aparelho cadastrado.<br>Toque no + para começar.'}
+    </div>`;
+    updateStats();
+    return;
+  }
+
+  el.innerHTML = f.map((p,i) => `
+    <div class="card" style="animation-delay:${i*40}ms">
+      <div class="card-body">
+        <div class="card-top">
+          <div>
+            <div class="card-name">${p.nome}</div>
+            <div class="card-sub">${p.cor||'—'} &nbsp;·&nbsp; ${fmtDate(p.data)}</div>
+          </div>
+          <div class="card-acts">
+            <button class="btn" onclick="openModal('${p.id}')">✏️ Editar</button>
+            <button class="btn btn-del" onclick="excluir('${p.id}')">🗑</button>
+          </div>
+        </div>
+        <div class="tags">
+          <span class="tag">💾 ${p.storage}</span>
+          <span class="tag">⚡ ${p.ram} RAM</span>
+          ${simBadge('SIM1',p.sim1)}
+          ${simBadge('SIM2',p.sim2)}
+        </div>
+        <div class="card-price">R$ ${fmt(p.valor)}</div>
+      </div>
+    </div>
+  `).join('');
+  updateStats();
+};
+
+// ── HELPERS ────────────────────────────────────
+function simBadge(label, v){
+  if(v==='ok')   return `<span class="tag tag-ok">${label} ✓</span>`;
+  if(v==='fail') return `<span class="tag tag-fail">${label} ✗</span>`;
+  return `<span class="tag">${label} —</span>`;
+}
+function fmt(v){ return parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2}); }
+function fmtDate(d){
+  if(!d) return '—';
+  const [y,m,day]=d.split('-'); return `${day}/${m}/${y}`;
+}
+function today(){ return new Date().toISOString().split('T')[0]; }
+window.toast = function(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+};
+
+// ── BOOT ───────────────────────────────────────
+const cfg = getConfig();
+if(cfg){ init(cfg.apiKey, cfg.projectId); }
+else {
+  document.getElementById('loading').classList.add('hidden');
+  setTimeout(()=>document.getElementById('loading').style.display='none',350);
+  document.getElementById('setup').classList.add('show');
+}
+
+// Service Worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
