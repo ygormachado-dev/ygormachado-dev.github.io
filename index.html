@@ -898,12 +898,15 @@ window.fecharConfig = ()=> document.getElementById('cfg-overlay').classList.remo
 window.bgClickCfg = (e)=>{ if(e.target===document.getElementById('cfg-overlay')) fecharConfig(); };
 
 // ── BOOT ─────────────────────────────────────────
-// Firebase já configurado — funciona em qualquer dispositivo automaticamente
+// Limpa service workers antigos que causam problemas de cache
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.getRegistrations().then(regs=>regs.forEach(r=>r.unregister()));
+  caches.keys().then(keys=>keys.forEach(k=>caches.delete(k)));
+}
+// Firebase configurado diretamente no código
 const FIXED_CONFIG = { apiKey:'AIzaSyD6iCTPQRppW2V4TQsZj1OK7ZCysShvNN0', projectId:'sos-celulares-93e90' };
 localStorage.setItem(CFG_KEY, JSON.stringify(FIXED_CONFIG));
 init(FIXED_CONFIG.apiKey, FIXED_CONFIG.projectId);
-
-if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
 </html>
